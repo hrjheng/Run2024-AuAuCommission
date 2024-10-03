@@ -75,6 +75,15 @@
 #include <boost/format.hpp>
 #include <boost/math/special_functions/sign.hpp>
 
+namespace
+{
+template <class T> void CleanVec(std::vector<T> &v)
+{
+    std::vector<T>().swap(v);
+    v.shrink_to_fit();
+}
+} // namespace
+
 //____________________________________________________________________________..
 MvtxQaNtuplizer::MvtxQaNtuplizer(const std::string &name)
     : SubsysReco(name)
@@ -103,6 +112,11 @@ int MvtxQaNtuplizer::Init(PHCompositeNode *topNode)
     {
         outTree->Branch("nFeeIDs", &nFeeIDs, "nFeeIDs/I");
         outTree->Branch("MvtxRawEvtHeader_feeidinfo_feeid", &MvtxRawEvtHeader_feeidinfo_feeid);
+        outTree->Branch("MvtxRawEvtHeader_feeidinfo_layer", &MvtxRawEvtHeader_feeidinfo_layer);
+        outTree->Branch("MvtxRawEvtHeader_feeidinfo_stave", &MvtxRawEvtHeader_feeidinfo_stave);
+        outTree->Branch("MvtxRawEvtHeader_feeidinfo_gbtid", &MvtxRawEvtHeader_feeidinfo_gbtid);
+        outTree->Branch("MvtxRawEvtHeader_feeidinfo_endpoint1", &MvtxRawEvtHeader_feeidinfo_endpoint1);
+        outTree->Branch("MvtxRawEvtHeader_feeidinfo_endpoint2", &MvtxRawEvtHeader_feeidinfo_endpoint2);
         outTree->Branch("MvtxRawEvtHeader_feeidinfo_detField", &MvtxRawEvtHeader_feeidinfo_detField);
         outTree->Branch("MvtxRawEvtHeader_feeidinfo_bco", &MvtxRawEvtHeader_feeidinfo_bco);
         outTree->Branch("MvtxRawEvtHeader_MvtxLvL1BCO", &MvtxRawEvtHeader_MvtxLvL1BCO);
@@ -198,41 +212,17 @@ int MvtxQaNtuplizer::process_event(PHCompositeNode *topNode)
         exit(1);
     }
 
-    std::set<uint64_t> strobeList = mvtx_event_header->get_strobe_BCOs();
-    for (auto iterStrobe = strobeList.begin(); iterStrobe != strobeList.end(); ++iterStrobe)
-    {
-        strobe_BCOs.push_back(*iterStrobe);
-        std::set<uint64_t> l1List = mvtx_event_header->get_L1_BCO_from_strobe_BCO(*iterStrobe);
-        for (auto iterL1 = l1List.begin(); iterL1 != l1List.end(); ++iterL1)
-        {
-            L1_BCOs.push_back(*iterL1);
-        }
-    }
-
     event = f4aCounter;
+    
     nFeeIDs = 0;
-    numberL1s = mvtx_event_header->get_number_L1s();
-
-    MvtxRawEvtHeader_feeidinfo_feeid.clear();
-    MvtxRawEvtHeader_feeidinfo_detField.clear();
-    MvtxRawEvtHeader_feeidinfo_bco.clear();
-    MvtxRawEvtHeader_MvtxLvL1BCO.clear();
-    TrkrHit_layer.clear();
-    TrkrHit_stave.clear();
-    TrkrHit_chip.clear();
-    localX.clear();
-    localY.clear();
-    TrkrHit_globalX.clear();
-    TrkrHit_globalY.clear();
-    TrkrHit_globalZ.clear();
-    clusZSize.clear();
-    clusPhiSize.clear();
-    clusSize.clear();
     chip_occupancy = 0.;
     chip_hits = 0.;
 
     if (getMvtxRawEvtHeader)
         MvtxRawEvtHeaderInfo(topNode);
+
+    if (getMvtxEvtHeader)
+        MvtxEvtHeaderInfo(topNode);
 
     if (getTrkrHit)
         TrkrHitInfo(topNode);
@@ -242,26 +232,9 @@ int MvtxQaNtuplizer::process_event(PHCompositeNode *topNode)
 
     outTree->Fill();
 
-    // clean up
-    MvtxRawEvtHeader_feeidinfo_feeid.clear();
-    MvtxRawEvtHeader_feeidinfo_detField.clear();
-    MvtxRawEvtHeader_feeidinfo_bco.clear();
-    MvtxRawEvtHeader_MvtxLvL1BCO.clear();
-    TrkrHit_layer.clear();
-    TrkrHit_stave.clear();
-    TrkrHit_chip.clear();
-    localX.clear();
-    localY.clear();
-    TrkrHit_globalX.clear();
-    TrkrHit_globalY.clear();
-    TrkrHit_globalZ.clear();
-    clusZSize.clear();
-    clusPhiSize.clear();
-    clusSize.clear();
-    strobe_BCOs.clear();
-    L1_BCOs.clear();
-
     ++f4aCounter;
+
+    Cleanup();
 
     return Fun4AllReturnCodes::EVENT_OK;
 }
@@ -271,11 +244,21 @@ void MvtxQaNtuplizer::MvtxRawEvtHeaderInfo(PHCompositeNode *topNode)
     std::cout << "MvtxQaNtuplizer::MvtxRawEvtHeaderInfo(PHCompositeNode *topNode) Getting MvtxRawEvtHeader Info" << std::endl;
 
     uint64_t nFeeIDInfo = mvtxRawEvtHeader->get_nFeeIdInfo();
+    nFeeIDs = nFeeIDInfo;
 
     for (uint64_t i = 0; i < nFeeIDInfo; ++i)
     {
         auto FeeIdInfo = mvtxRawEvtHeader->get_feeIdInfo(i);
+        auto feeid = FeeIdInfo->get_feeId();
+        auto _linkId = MvtxRawDefs::decode_feeid(feeid);
+        std::pair<uint8_t, uint8_t> flxendpoint = MvtxRawDefs::get_flx_endpoint(_linkId.layer, _linkId.stave);
+
         MvtxRawEvtHeader_feeidinfo_feeid.push_back(FeeIdInfo->get_feeId());
+        MvtxRawEvtHeader_feeidinfo_layer.push_back(_linkId.layer);
+        MvtxRawEvtHeader_feeidinfo_stave.push_back(_linkId.stave);
+        MvtxRawEvtHeader_feeidinfo_gbtid.push_back(_linkId.gbtid);
+        MvtxRawEvtHeader_feeidinfo_endpoint1.push_back(flxendpoint.first);
+        MvtxRawEvtHeader_feeidinfo_endpoint2.push_back(flxendpoint.second);
         MvtxRawEvtHeader_feeidinfo_detField.push_back(FeeIdInfo->get_detField());
         MvtxRawEvtHeader_feeidinfo_bco.push_back(FeeIdInfo->get_bco());
     }
@@ -286,7 +269,26 @@ void MvtxQaNtuplizer::MvtxRawEvtHeaderInfo(PHCompositeNode *topNode)
         MvtxRawEvtHeader_MvtxLvL1BCO.push_back(*iter);
     }
 
-    std::cout << "nFeeIDInfo: " << nFeeIDInfo << " MvtxRawEvtHeader_feeidinfo_feeid.size(): " << MvtxRawEvtHeader_feeidinfo_feeid.size() << " MvtxRawEvtHeader_feeidinfo_detField.size(): " << MvtxRawEvtHeader_feeidinfo_detField.size() << " MvtxRawEvtHeader_feeidinfo_bco.size(): " << MvtxRawEvtHeader_feeidinfo_bco.size() << " MvtxRawEvtHeader_MvtxLvL1BCO.size(): " << MvtxRawEvtHeader_MvtxLvL1BCO.size() << std::endl;
+    std::cout << "nFeeIDInfo: " << nFeeIDInfo << " MvtxRawEvtHeader_feeidinfo_feeid.size(): " << MvtxRawEvtHeader_feeidinfo_feeid.size() << " MvtxRawEvtHeader_feeidinfo_detField.size(): " << MvtxRawEvtHeader_feeidinfo_detField.size() << " MvtxRawEvtHeader_feeidinfo_bco.size(): " << MvtxRawEvtHeader_feeidinfo_bco.size()
+              << " MvtxRawEvtHeader_MvtxLvL1BCO.size(): " << MvtxRawEvtHeader_MvtxLvL1BCO.size() << std::endl;
+}
+//____________________________________________________________________________..
+void MvtxQaNtuplizer::MvtxEvtHeaderInfo(PHCompositeNode *topNode)
+{
+    std::cout << "MvtxQaNtuplizer::MvtxEvtHeaderInfo(PHCompositeNode *topNode) Getting MvtxEvtHeader Info" << std::endl;
+
+    numberL1s = mvtx_event_header->get_number_L1s();
+
+    std::set<uint64_t> strobeList = mvtx_event_header->get_strobe_BCOs();
+    for (auto iterStrobe = strobeList.begin(); iterStrobe != strobeList.end(); ++iterStrobe)
+    {
+        strobe_BCOs.push_back(*iterStrobe);
+        std::set<uint64_t> l1List = mvtx_event_header->get_L1_BCO_from_strobe_BCO(*iterStrobe);
+        for (auto iterL1 = l1List.begin(); iterL1 != l1List.end(); ++iterL1)
+        {
+            L1_BCOs.push_back(*iterL1);
+        }
+    }
 }
 //____________________________________________________________________________..
 void MvtxQaNtuplizer::TrkrHitInfo(PHCompositeNode *topNode)
@@ -397,3 +399,29 @@ int MvtxQaNtuplizer::Reset(PHCompositeNode *topNode)
 
 //____________________________________________________________________________..
 void MvtxQaNtuplizer::Print(const std::string &what) const { std::cout << "MvtxQaNtuplizer::Print(const std::string &what) const Printing info for " << what << std::endl; }
+//____________________________________________________________________________..
+void MvtxQaNtuplizer::Cleanup()
+{
+    CleanVec(MvtxRawEvtHeader_feeidinfo_feeid);
+    CleanVec(MvtxRawEvtHeader_feeidinfo_layer);
+    CleanVec(MvtxRawEvtHeader_feeidinfo_stave);
+    CleanVec(MvtxRawEvtHeader_feeidinfo_gbtid);
+    CleanVec(MvtxRawEvtHeader_feeidinfo_endpoint1);
+    CleanVec(MvtxRawEvtHeader_feeidinfo_endpoint2);
+    CleanVec(MvtxRawEvtHeader_feeidinfo_detField);
+    CleanVec(MvtxRawEvtHeader_feeidinfo_bco);
+    CleanVec(MvtxRawEvtHeader_MvtxLvL1BCO);
+    CleanVec(TrkrHit_layer);
+    CleanVec(TrkrHit_stave);
+    CleanVec(TrkrHit_chip);
+    CleanVec(localX);
+    CleanVec(localY);
+    CleanVec(TrkrHit_globalX);
+    CleanVec(TrkrHit_globalY);
+    CleanVec(TrkrHit_globalZ);
+    CleanVec(clusZSize);
+    CleanVec(clusPhiSize);
+    CleanVec(clusSize);
+    CleanVec(strobe_BCOs);
+    CleanVec(L1_BCOs);
+}

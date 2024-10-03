@@ -21,6 +21,7 @@ libMvtxQaNtuplizer_la_SOURCES = \
 
 libMvtxQaNtuplizer_la_LIBADD = \
   -lphool \
+  -lphoolraw \
   -lffaobjects \
   -lffarawobjects \
   -ltrack_io \
@@ -30,6 +31,7 @@ libMvtxQaNtuplizer_la_LIBADD = \
   -lmicromegas \
   -lglobalvertex \
   -ltrackbase_historic_io \
+  -lqautils \
   -lSubsysReco
 
 BUILT_SOURCES = testexternals.cc

@@ -21,6 +21,8 @@
 #include <ffarawobjects/MvtxRawEvtHeaderv2.h>
 #include <ffarawobjects/MvtxFeeIdInfov1.h>
 
+#include <fun4allraw/MvtxRawDefs.h>
+
 #include <g4detectors/PHG4CylinderGeomContainer.h>
 #include <mvtx/CylinderGeom_Mvtx.h>
 
@@ -80,17 +82,21 @@ class MvtxQaNtuplizer : public SubsysReco
 
     void OutputFileName(const std::string &file) { outFileName = file; }
     void GetMvtxRawEvtHeaderInfo(bool b) { getMvtxRawEvtHeader = b; }
+    void GetMvtxEvtHeader(bool b) { getMvtxEvtHeader = b; }
     void GetTrkrHitInfo(bool b) { getTrkrHit = b; }
     void GetTrkrClusterInfo(bool b) { getTrkrCluster = b; }
 
   private:
     bool getMvtxRawEvtHeader = true;
+    bool getMvtxEvtHeader = true;
     bool getTrkrHit = true;
     bool getTrkrCluster = false;
 
     void MvtxRawEvtHeaderInfo(PHCompositeNode *topNode);
+    void MvtxEvtHeaderInfo(PHCompositeNode *topNode);
     void TrkrHitInfo(PHCompositeNode *topNode);
     void TrkrClusterInfo(PHCompositeNode *topNode);
+    void Cleanup();
     
     int f4aCounter = 0;
 
@@ -107,6 +113,11 @@ class MvtxQaNtuplizer : public SubsysReco
     int event = 0;
     int nFeeIDs = 0;
     std::vector<uint16_t> MvtxRawEvtHeader_feeidinfo_feeid;
+    std::vector<uint32_t> MvtxRawEvtHeader_feeidinfo_layer;
+    std::vector<uint32_t> MvtxRawEvtHeader_feeidinfo_stave;
+    std::vector<uint32_t> MvtxRawEvtHeader_feeidinfo_gbtid;
+    std::vector<uint8_t> MvtxRawEvtHeader_feeidinfo_endpoint1;
+    std::vector<uint8_t> MvtxRawEvtHeader_feeidinfo_endpoint2;
     std::vector<uint32_t> MvtxRawEvtHeader_feeidinfo_detField;
     std::vector<uint64_t> MvtxRawEvtHeader_feeidinfo_bco;
     std::vector<uint64_t> MvtxRawEvtHeader_MvtxLvL1BCO;
