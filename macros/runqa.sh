@@ -13,42 +13,33 @@ source /opt/sphenix/core/bin/setup_local.sh $MYINSTALL
 # $2: run number
 # $3: run with GL1 or not
 # $4: number of events to process
-# $5: run QA or not
-# $6: run hit ntuplizer or not
+# $5: from rawdata to dst (Fun4All_MvtxProduction.C)
+# $6: from dst to hit/cluster/qa/ntuple (Fun4All_MvtxQA.C)
 # $7 skip events
 
 # check arguments
 if [ $# -lt 7 ]; then
-    echo "Usage: runqa.sh <type> <run number> <GL1> <nevents(strobes)> <runQA> <runHitNtuplizer> <skip events(strobes)>"
+    echo "Usage: runqa.sh <type> <run number> <GL1> <nevents(strobes)> <run Fun4All_MvtxProduction.C> <run Fun4All_MvtxQA.C> <skip events(strobes)>"
     exit 1
 fi
 
-# make list 
-mvtx_makelist.sh $1 $2
-
-# run production
-# root -l -q -b Fun4All_MvtxProduction.C\($4,$2,$3\)
-
-# run hit unpacking, clustering, QA, and hit ntuplizer
-# for example, if run with GL1, change the input file name from "*_woGL1.root" to "*_wGL1.root"
-if [ $3 -eq 1 ]; then
-    sed -i 's/woGL1/wGL1/g' Fun4All_MvtxQA.C
-else
-    sed -i 's/wGL1/woGL1/g' Fun4All_MvtxQA.C
-fi
-
 if [ $5 -eq 1 ]; then
-    sed -i 's/Enable::QA = false;/Enable::QA = true;/g' Fun4All_MvtxQA.C
-else
-    sed -i 's/Enable::QA = true;/Enable::QA = false;/g' Fun4All_MvtxQA.C
+    # make list
+    mvtx_makelist.sh $1 $2
+
+    echo "Run Fun4All_MvtxProduction.C"
+
+    root -l -q -b Fun4All_MvtxProduction.C\($4,$2,$3\)
 fi
 
 if [ $6 -eq 1 ]; then
-    sed -i 's/bool hitntp = false;/bool hitntp = true;/g' Fun4All_MvtxQA.C
-else
-    sed -i 's/bool hitntp = true;/bool hitntp = false;/g' Fun4All_MvtxQA.C
+    echo "Run Fun4All_MvtxQA.C"
+
+    if [ $3 -eq 1 ]; then
+        sed -i 's/woGL1/wGL1/g' Fun4All_MvtxQA.C
+    else
+        sed -i 's/wGL1/woGL1/g' Fun4All_MvtxQA.C
+    fi
+
+    root -l -q -b Fun4All_MvtxQA.C\($4,$2,$7\)
 fi
-
-
-
-root -l -q -b Fun4All_MvtxQA.C\($4,$2,$7\)
