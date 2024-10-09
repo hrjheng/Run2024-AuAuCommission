@@ -1,0 +1,12 @@
+Universe           = vanilla
+initialDir         = /sphenix/user/hjheng/sPHENIXRepo/MVTX/Run2024-AuAuCommission/macros
+Executable         = $(initialDir)/runqa.sh
+PeriodicHold       = (NumJobStarts>=1 && JobStatus == 1)
+concurrency_limits = CONCURRENCY_LIMIT_DEFAULT:100
+request_memory     = 20GB
+Priority           = 20
+Output             = $(initialDir)/condorLog/condor-local-prod-run$(run_number)-ifrungl1$(ifrungl1)-nevents$(nevents)-$INT(Process,%05d).out
+Error              = $(initialDir)/condorLog/condor-local-prod-run$(run_number)-ifrungl1$(ifrungl1)-nevents$(nevents)-$INT(Process,%05d).err
+Log                = /tmp/condor-mvtx-local-prod-run$(run_number)-$INT(Process,%05d)-$ENV(USER).log
+Arguments          = $(type) $(run_number) $(ifrungl1) $(nevents) $(runMvtxProduction) $(runQANtuplizer) $(skip)
+Queue type run_number ifrungl1 nevents runMvtxProduction runQANtuplizer skip from runqa_args.list

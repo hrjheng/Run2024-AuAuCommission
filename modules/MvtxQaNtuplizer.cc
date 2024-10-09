@@ -110,7 +110,10 @@ int MvtxQaNtuplizer::Init(PHCompositeNode *topNode)
     outTree->Branch("numberL1s", &numberL1s, "numberL1s/I");
     if (getMvtxRawEvtHeader)
     {
+        outTree->Branch("GL1Packet_BCO", &GL1Packet_BCO);
         outTree->Branch("nFeeIDs", &nFeeIDs, "nFeeIDs/I");
+        outTree->Branch("nUniqueFeeBcos", &nUniqueFeeBcos, "nUniqueFeeBcos/I");
+        outTree->Branch("nUniqueL1Bcos", &nUniqueL1Bcos, "nUniqueL1Bcos/I");
         outTree->Branch("MvtxRawEvtHeader_feeidinfo_feeid", &MvtxRawEvtHeader_feeidinfo_feeid);
         outTree->Branch("MvtxRawEvtHeader_feeidinfo_layer", &MvtxRawEvtHeader_feeidinfo_layer);
         outTree->Branch("MvtxRawEvtHeader_feeidinfo_stave", &MvtxRawEvtHeader_feeidinfo_stave);
@@ -120,6 +123,10 @@ int MvtxQaNtuplizer::Init(PHCompositeNode *topNode)
         outTree->Branch("MvtxRawEvtHeader_feeidinfo_detField", &MvtxRawEvtHeader_feeidinfo_detField);
         outTree->Branch("MvtxRawEvtHeader_feeidinfo_bco", &MvtxRawEvtHeader_feeidinfo_bco);
         outTree->Branch("MvtxRawEvtHeader_MvtxLvL1BCO", &MvtxRawEvtHeader_MvtxLvL1BCO);
+        outTree->Branch("nMvtxRawHits", &nMvtxRawHits, "nMvtxRawHits/I");
+        outTree->Branch("MvtxRawHit_bco", &MvtxRawHit_bco);
+        outTree->Branch("MvtxRawHit_strobebc", &MvtxRawHit_strobebc);
+        outTree->Branch("MvtxRawHit_chipbc", &MvtxRawHit_chipbc);
     }
     if (getTrkrHit)
     {
@@ -160,6 +167,20 @@ int MvtxQaNtuplizer::process_event(PHCompositeNode *topNode)
     if (!dstNode)
     {
         std::cout << __FILE__ << "::" << __func__ << " - DST Node missing, doing nothing." << std::endl;
+        exit(1);
+    }
+
+    gl1packet = findNode::getClass<Gl1Packet>(dstNode, "GL1RAWHIT");
+    if (!gl1packet)
+    {
+        std::cout << __FILE__ << "::" << __func__ << " - Gl1Packet missing, doing nothing." << std::endl;
+        exit(1);
+    }
+
+    mvtxRawHitContainer = findNode::getClass<MvtxRawHitContainer>(dstNode, "MVTXRAWHIT");
+    if (!mvtxRawHitContainer)
+    {
+        std::cout << __FILE__ << "::" << __func__ << " - MvtxRawHitContainer missing, doing nothing." << std::endl;
         exit(1);
     }
 
@@ -213,7 +234,7 @@ int MvtxQaNtuplizer::process_event(PHCompositeNode *topNode)
     }
 
     event = f4aCounter;
-    
+
     nFeeIDs = 0;
     chip_occupancy = 0.;
     chip_hits = 0.;
@@ -243,10 +264,14 @@ void MvtxQaNtuplizer::MvtxRawEvtHeaderInfo(PHCompositeNode *topNode)
 {
     std::cout << "MvtxQaNtuplizer::MvtxRawEvtHeaderInfo(PHCompositeNode *topNode) Getting MvtxRawEvtHeader Info" << std::endl;
 
+    GL1Packet_BCO = (gl1packet->lValue(0, "BCO") & 0xFFFFFFFFFFU); // Only the lower 40 bits are retained
+
     uint64_t nFeeIDInfo = mvtxRawEvtHeader->get_nFeeIdInfo();
     nFeeIDs = nFeeIDInfo;
 
-    for (uint64_t i = 0; i < nFeeIDInfo; ++i)
+    std::set<uint64_t> set_FeeIdInfo_bco;
+
+    for (uint64_t i = 0; i < nFeeIDInfo; i++)
     {
         auto FeeIdInfo = mvtxRawEvtHeader->get_feeIdInfo(i);
         auto feeid = FeeIdInfo->get_feeId();
@@ -261,12 +286,25 @@ void MvtxQaNtuplizer::MvtxRawEvtHeaderInfo(PHCompositeNode *topNode)
         MvtxRawEvtHeader_feeidinfo_endpoint2.push_back(flxendpoint.second);
         MvtxRawEvtHeader_feeidinfo_detField.push_back(FeeIdInfo->get_detField());
         MvtxRawEvtHeader_feeidinfo_bco.push_back(FeeIdInfo->get_bco());
+        set_FeeIdInfo_bco.insert(FeeIdInfo->get_bco());
     }
 
+    nUniqueFeeBcos = set_FeeIdInfo_bco.size();
+
     auto mvtxl1trgset = mvtxRawEvtHeader->getMvtxLvL1BCO();
+    nUniqueL1Bcos = mvtxl1trgset.size();
     for (auto iter = mvtxl1trgset.begin(); iter != mvtxl1trgset.end(); ++iter)
     {
         MvtxRawEvtHeader_MvtxLvL1BCO.push_back(*iter);
+    }
+
+    nMvtxRawHits = mvtxRawHitContainer->get_nhits();
+    for (unsigned int i = 0; i < nMvtxRawHits; i++)
+    {
+        auto rawhit = mvtxRawHitContainer->get_hit(i);
+        MvtxRawHit_bco.push_back(rawhit->get_bco());
+        MvtxRawHit_strobebc.push_back(rawhit->get_strobe_bc());
+        MvtxRawHit_chipbc.push_back(rawhit->get_chip_bc());
     }
 
     std::cout << "nFeeIDInfo: " << nFeeIDInfo << " MvtxRawEvtHeader_feeidinfo_feeid.size(): " << MvtxRawEvtHeader_feeidinfo_feeid.size() << " MvtxRawEvtHeader_feeidinfo_detField.size(): " << MvtxRawEvtHeader_feeidinfo_detField.size() << " MvtxRawEvtHeader_feeidinfo_bco.size(): " << MvtxRawEvtHeader_feeidinfo_bco.size()
@@ -411,6 +449,9 @@ void MvtxQaNtuplizer::Cleanup()
     CleanVec(MvtxRawEvtHeader_feeidinfo_detField);
     CleanVec(MvtxRawEvtHeader_feeidinfo_bco);
     CleanVec(MvtxRawEvtHeader_MvtxLvL1BCO);
+    CleanVec(MvtxRawHit_bco);
+    CleanVec(MvtxRawHit_strobebc);
+    CleanVec(MvtxRawHit_chipbc);
     CleanVec(TrkrHit_layer);
     CleanVec(TrkrHit_stave);
     CleanVec(TrkrHit_chip);

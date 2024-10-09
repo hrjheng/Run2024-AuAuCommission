@@ -20,16 +20,16 @@ type=$1
 runnumber=$(printf "%08d" $2)
 
 for i in {0..5}; do
-  ls -1 /sphenix/lustre01/sphnxpro/physics/MVTX/${type}/${type}_mvtx${i}-${runnumber}-* >./filelists/mvtx_${i}.list
-  if [ ! -s filelists/mvtx_${i}.list ]; then
-    echo mvtx_${i}.list empty, removing it
-    rm filelists/mvtx_${i}.list
+  ls -1 /sphenix/lustre01/sphnxpro/physics/MVTX/${type}/${type}_mvtx${i}-${runnumber}-* >./filelists/mvtx_${i}_Run${runnumber}.list
+  if [ ! -s filelists/mvtx_${i}_Run${runnumber}.list ]; then
+    echo mvtx_${i}_Run${runnumber}.list empty, removing it
+    rm filelists/mvtx_${i}_Run${runnumber}.list
   fi
 
 done
 
-/bin/ls -1 /sphenix/lustre01/sphnxpro/physics/GL1/${type}/GL1_*-${runnumber}-* >./filelists/gl1daq.list
-if [ ! -s filelists/gl1daq.list ]; then
-  echo gl1daq.list empty, removing it
-  rm filelists/gl1daq.list
+/bin/ls -1 /sphenix/lustre01/sphnxpro/physics/GL1/${type}/GL1_*-${runnumber}-* >./filelists/gl1daq_Run${runnumber}.list
+if [ ! -s filelists/gl1daq_Run${runnumber}.list ]; then
+  echo gl1daq_Run${runnumber}.list empty, removing it
+  rm filelists/gl1daq_Run${runnumber}.list
 fi

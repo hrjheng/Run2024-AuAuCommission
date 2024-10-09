@@ -1,6 +1,6 @@
 void localQAdump(TString fname = "./qahists/53705/qahist-nEvent10000-skip0.root", int runnumber = 53705)
 {
-    TString outdir = TString::Format("./plots/QAdump/Run%d", runnumber);
+    TString outdir = TString::Format("./plots/Run%d/F4AQA", runnumber);
     gSystem->Exec(Form("mkdir -p %s", outdir.Data()));
 
     TKey *key;
@@ -17,7 +17,7 @@ void localQAdump(TString fname = "./qahists/53705/qahist-nEvent10000-skip0.root"
     while (key = (TKey *)next())
     {
         TClass *cl = gROOT->GetClass(key->GetClassName());
-        if (cl->InheritsFrom("TH1F") || cl->InheritsFrom("TH1D"))
+        if (cl->InheritsFrom("TH1F") || cl->InheritsFrom("TH1D") || cl->InheritsFrom("TH1I"))
         {
             gPad->SetRightMargin(0.05);
             TH1 *h = (TH1 *)key->ReadObj();

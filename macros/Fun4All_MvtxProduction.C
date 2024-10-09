@@ -1,4 +1,5 @@
 #include <GlobalVariables.C>
+#include <QA.C>
 #include <fun4all/Fun4AllDstOutputManager.h>
 #include <fun4all/Fun4AllInputManager.h>
 #include <fun4all/Fun4AllOutputManager.h>
@@ -43,23 +44,41 @@ bool isGood(const string &infile)
     return goodfile;
 }
 
-void Fun4All_MvtxProduction(const int nEvents = 10000,    //
-                            const int run_number = 53705, //
-                            const bool withGL1 = false    //
+void Fun4All_MvtxProduction(const int nEvents = 10000,   //
+                            const int runnumber = 53705, //
+                            const bool withGL1 = false   //
 )
 {
     bool verbose = false;
-    std::string dstoutdir = "./dst/";
+    Enable::QA = true;
 
+    // std::string dstoutdir = "./dst/";
+    std::string dstoutdir = "/sphenix/tg/tg01/hf/hjheng/MVTX/Run24-AuAu/dst/";
+    // std::string QAhistdir = "./qahists/";
+    std::string QAhistdir = "/sphenix/tg/tg01/hf/hjheng/MVTX/Run24-AuAu/qahists/";
+    std::string outfilename = "dst_Run" + to_string(runnumber) + "_";
+    outfilename += (withGL1) ? "wGL1" : "woGL1";
+    outfilename += ".root";
+    TString qaoutfile = QAhistdir + "/" + std::to_string(runnumber) + "/qahist-streamprod-nEvent" + std::to_string(nEvents);
+    std::string qaOutfile = qaoutfile.Data();
+
+    std::string mkdir = "mkdir -p " + dstoutdir;
+    system(mkdir.c_str());
+    mkdir = "mkdir -p " + QAhistdir + "/" + std::to_string(runnumber) + "/";
+    system(mkdir.c_str());
+
+    // format the string of runnumber to as %08d
+    std::string runnumber_str = std::to_string(runnumber);
+    runnumber_str = std::string(8 - runnumber_str.length(), '0') + runnumber_str;
     vector<std::string> mvtxlists = {
-        "./filelists/mvtx_0.list", //
-        "./filelists/mvtx_1.list", //
-        "./filelists/mvtx_2.list", //
-        "./filelists/mvtx_3.list", //
-        "./filelists/mvtx_4.list", //
-        "./filelists/mvtx_5.list"  //
+        "./filelists/mvtx_0_Run" + runnumber_str + ".list", //
+        "./filelists/mvtx_1_Run" + runnumber_str + ".list", //
+        "./filelists/mvtx_2_Run" + runnumber_str + ".list", //
+        "./filelists/mvtx_3_Run" + runnumber_str + ".list", //
+        "./filelists/mvtx_4_Run" + runnumber_str + ".list", //
+        "./filelists/mvtx_5_Run" + runnumber_str + ".list", //
     };
-    vector<std::string> gl1lists = {"./filelists/gl1daq.list"};
+    vector<std::string> gl1lists = {"./filelists/gl1daq_Run" + runnumber_str + ".list"};
 
     Fun4AllServer *se = Fun4AllServer::instance();
     se->Verbosity(1);
@@ -116,13 +135,6 @@ void Fun4All_MvtxProduction(const int nEvents = 10000,    //
     FlagHandler *flag = new FlagHandler();
     se->registerSubsystem(flag);
 
-    std::string outfilename = "dst_Run" + to_string(run_number) + "_";
-    outfilename += (withGL1) ? "wGL1" : "woGL1";
-    outfilename += ".root";
-
-    string mkdir = "mkdir -p " + dstoutdir;
-    system(mkdir.c_str());
-
     Fun4AllOutputManager *out = new Fun4AllDstOutputManager("out", dstoutdir + outfilename);
     se->registerOutputManager(out);
 
@@ -133,8 +145,17 @@ void Fun4All_MvtxProduction(const int nEvents = 10000,    //
     se->run(nEvents);
 
     se->End();
+
+    if (Enable::QA)
+    {
+        TString qaname = qaOutfile + ".root";
+        std::string qaOutputFileName(qaname.Data());
+        QAHistManagerDef::saveQARootFile(qaOutputFileName);
+    }
+
     se->PrintTimer();
     delete se;
+
     cout << "all done" << endl;
     gSystem->Exit(0);
 }

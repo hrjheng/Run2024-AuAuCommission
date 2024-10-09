@@ -51,7 +51,8 @@ void Fun4All_MvtxQA(const int nEvents = 100,     //
     bool hitntp = true;
     Enable::QA = true;
 
-    std::string QAhistdir = "./qahists/";
+    // std::string QAhistdir = "./qahists/";
+    std::string QAhistdir = "/sphenix/tg/tg01/hf/hjheng/MVTX/Run24-AuAu/qahists/";
     std::string mkdir = "mkdir -p " + QAhistdir + "/" + std::to_string(runnumber) + "/";
     system(mkdir.c_str());
 
@@ -82,7 +83,8 @@ void Fun4All_MvtxQA(const int nEvents = 100,     //
     TrackingInit();
 
     auto hitsin = new Fun4AllDstInputManager("InputManager");
-    hitsin->fileopen(Form("./dst/dst_Run%d_wGL1.root", runnumber));
+    // hitsin->fileopen(Form("./dst/dst_Run%d_wGL1.root", runnumber));
+    hitsin->fileopen(Form("/sphenix/tg/tg01/hf/hjheng/MVTX/Run24-AuAu/dst/dst_Run%d_wGL1.root", runnumber));
 
     se->registerInputManager(hitsin);
 

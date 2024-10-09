@@ -20,6 +20,9 @@
 
 #include <ffarawobjects/MvtxRawEvtHeaderv2.h>
 #include <ffarawobjects/MvtxFeeIdInfov1.h>
+#include <ffarawobjects/MvtxRawHit.h>
+#include <ffarawobjects/MvtxRawHitContainer.h>
+#include <ffarawobjects/Gl1Packet.h>
 
 #include <fun4allraw/MvtxRawDefs.h>
 
@@ -100,7 +103,9 @@ class MvtxQaNtuplizer : public SubsysReco
     
     int f4aCounter = 0;
 
+    Gl1Packet *gl1packet = nullptr;
     MvtxRawEvtHeaderv2 *mvtxRawEvtHeader = nullptr;
+    MvtxRawHitContainer *mvtxRawHitContainer = nullptr;
     TrkrHitSetContainerv1 *trkrHitSetContainer = nullptr;
     TrkrClusterContainer *trktClusterContainer = nullptr;
     ActsGeometry *actsGeom = nullptr;
@@ -112,6 +117,8 @@ class MvtxQaNtuplizer : public SubsysReco
 
     int event = 0;
     int nFeeIDs = 0;
+    int nUniqueFeeBcos = 0;
+    int nUniqueL1Bcos = 0;
     std::vector<uint16_t> MvtxRawEvtHeader_feeidinfo_feeid;
     std::vector<uint32_t> MvtxRawEvtHeader_feeidinfo_layer;
     std::vector<uint32_t> MvtxRawEvtHeader_feeidinfo_stave;
@@ -123,6 +130,11 @@ class MvtxQaNtuplizer : public SubsysReco
     std::vector<uint64_t> MvtxRawEvtHeader_MvtxLvL1BCO;
     std::vector<uint64_t> strobe_BCOs;
     std::vector<uint64_t> L1_BCOs;
+    uint64_t GL1Packet_BCO = 0;
+    unsigned int nMvtxRawHits = 0;
+    std::vector<uint64_t> MvtxRawHit_bco;
+    std::vector<uint32_t> MvtxRawHit_strobebc;
+    std::vector<uint32_t> MvtxRawHit_chipbc;
     int numberL1s = 0;
     std::vector<int> TrkrHit_layer;
     std::vector<int> TrkrHit_stave;
